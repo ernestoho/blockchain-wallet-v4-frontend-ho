@@ -73,6 +73,7 @@ import * as S from './selectors'
 import { actions as A } from './slice'
 import * as T from './types'
 import { getDirection, getPreferredCurrency, reversePair, setPreferredCurrency } from './utils'
+import { isNabuError, NabuError } from 'services/errors'
 
 export const logLocation = 'components/buySell/sagas'
 
@@ -281,201 +282,213 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       selectors.core.walletOptions.getFlexiblePricingModel
     )).getOrElse(false)
     try {
-      const pair = S.getBSPair(yield select())
+      throw new NabuError({
+        title: "Hello", 
+        message: "error message"
+      })
+      // const pair = S.getBSPair(yield select())
 
-      if (!values) throw new Error(BS_ERROR.NO_AMOUNT)
-      if (!pair) throw new Error(BS_ERROR.NO_PAIR_SELECTED)
-      if (parseFloat(values.amount) <= 0) throw new Error(BS_ERROR.NO_AMOUNT)
-      const { fix, orderType, period } = values
+      // if (!values) throw new Error(BS_ERROR.NO_AMOUNT)
+      // if (!pair) throw new Error(BS_ERROR.NO_PAIR_SELECTED)
+      // if (parseFloat(values.amount) <= 0) throw new Error(BS_ERROR.NO_AMOUNT)
+      // const { fix, orderType, period } = values
 
-      // since two screens use this order creation saga and they have different
-      // forms, detect the order type and set correct form to submitting
-      let buyQuote
-      if (orderType === OrderType.SELL) {
-        yield put(actions.form.startSubmit(FORM_BS_PREVIEW_SELL))
-      } else {
-        if (isFlexiblePricingModel) {
-          buyQuote = S.getBuyQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
-        }
-        yield put(actions.form.startSubmit(FORM_BS_CHECKOUT))
-      }
+      // // since two screens use this order creation saga and they have different
+      // // forms, detect the order type and set correct form to submitting
+      // let buyQuote
+      // if (orderType === OrderType.SELL) {
+      //   yield put(actions.form.startSubmit(FORM_BS_PREVIEW_SELL))
+      // } else {
+      //   if (isFlexiblePricingModel) {
+      //     buyQuote = S.getBuyQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
+      //   }
+      //   yield put(actions.form.startSubmit(FORM_BS_CHECKOUT))
+      // }
 
-      const fiat = getFiatFromPair(pair.pair)
-      const coin = getCoinFromPair(pair.pair)
-      const amount =
-        fix === 'FIAT'
-          ? convertStandardToBase('FIAT', values.amount)
-          : convertStandardToBase(coin, values.amount)
-      const inputCurrency = orderType === OrderType.BUY ? fiat : coin
-      const outputCurrency = orderType === OrderType.BUY ? coin : fiat
-      const input = { amount, symbol: inputCurrency }
-      const output = { amount, symbol: outputCurrency }
+      // const fiat = getFiatFromPair(pair.pair)
+      // const coin = getCoinFromPair(pair.pair)
+      // const amount =
+      //   fix === 'FIAT'
+      //     ? convertStandardToBase('FIAT', values.amount)
+      //     : convertStandardToBase(coin, values.amount)
+      // const inputCurrency = orderType === OrderType.BUY ? fiat : coin
+      // const outputCurrency = orderType === OrderType.BUY ? coin : fiat
+      // const input = { amount, symbol: inputCurrency }
+      // const output = { amount, symbol: outputCurrency }
 
-      // used for sell only now, eventually buy as well
-      // TODO: use swap2 quote for buy AND sell
-      if (orderType === OrderType.SELL) {
-        const from = S.getSwapAccount(yield select())
-        const quote = S.getSellQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
-        if (!from) throw new Error(BS_ERROR.NO_ACCOUNT)
+      // // used for sell only now, eventually buy as well
+      // // TODO: use swap2 quote for buy AND sell
+      // if (orderType === OrderType.SELL) {
+      //   const from = S.getSwapAccount(yield select())
+      //   const quote = S.getSellQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
+      //   if (!from) throw new Error(BS_ERROR.NO_ACCOUNT)
 
-        const direction = getDirection(from)
-        const cryptoAmt =
-          fix === 'CRYPTO'
-            ? amount
-            : convertStandardToBase(
-                from.coin,
-                getQuote(pair.pair, convertStandardToBase('FIAT', quote.rate), fix, amount)
-              )
-        const refundAddr =
-          direction === 'FROM_USERKEY'
-            ? yield call(selectReceiveAddress, from, networks)
-            : undefined
-        const sellOrder: SwapOrderType = yield call(
-          api.createSwapOrder,
-          direction,
-          quote.quote.id,
-          cryptoAmt,
-          getFiatFromPair(pair.pair),
-          undefined,
-          refundAddr
-        )
-        // on chain
-        if (direction === 'FROM_USERKEY') {
-          const paymentR = S.getPayment(yield select())
-          // @ts-ignore
-          const payment = paymentGetOrElse(from.coin, paymentR)
-          try {
-            yield call(buildAndPublishPayment, payment.coin, payment, sellOrder.kind.depositAddress)
-            yield call(api.updateSwapOrder, sellOrder.id, 'DEPOSIT_SENT')
-          } catch (e) {
-            yield call(api.updateSwapOrder, sellOrder.id, 'CANCEL')
-            throw e
-          }
-        }
-        yield put(
-          A.setStep({
-            sellOrder,
-            step: 'SELL_ORDER_SUMMARY'
+      //   const direction = getDirection(from)
+      //   const cryptoAmt =
+      //     fix === 'CRYPTO'
+      //       ? amount
+      //       : convertStandardToBase(
+      //           from.coin,
+      //           getQuote(pair.pair, convertStandardToBase('FIAT', quote.rate), fix, amount)
+      //         )
+      //   const refundAddr =
+      //     direction === 'FROM_USERKEY'
+      //       ? yield call(selectReceiveAddress, from, networks)
+      //       : undefined
+      //   const sellOrder: SwapOrderType = yield call(
+      //     api.createSwapOrder,
+      //     direction,
+      //     quote.quote.id,
+      //     cryptoAmt,
+      //     getFiatFromPair(pair.pair),
+      //     undefined,
+      //     refundAddr
+      //   )
+      //   // on chain
+      //   if (direction === 'FROM_USERKEY') {
+      //     const paymentR = S.getPayment(yield select())
+      //     // @ts-ignore
+      //     const payment = paymentGetOrElse(from.coin, paymentR)
+      //     try {
+      //       yield call(buildAndPublishPayment, payment.coin, payment, sellOrder.kind.depositAddress)
+      //       yield call(api.updateSwapOrder, sellOrder.id, 'DEPOSIT_SENT')
+      //     } catch (e) {
+      //       yield call(api.updateSwapOrder, sellOrder.id, 'CANCEL')
+      //       throw e
+      //     }
+      //   }
+      //   yield put(
+      //     A.setStep({
+      //       sellOrder,
+      //       step: 'SELL_ORDER_SUMMARY'
+      //     })
+      //   )
+      //   yield put(actions.form.stopSubmit(FORM_BS_PREVIEW_SELL))
+      //   yield put(actions.components.refresh.refreshClicked())
+      //   return yield put(actions.components.swap.fetchTrades())
+      // }
+
+      // if (!paymentType) throw new Error(BS_ERROR.NO_PAYMENT_TYPE)
+      // if (isFlexiblePricingModel) {
+      //   // FIXME: this temporarily enables users to purchase min amounts of crypto with the enter amount fix set to CRYPTO
+      //   // remove this section when backend updates the flexiblePricing APIs to handle crypto amounts
+      //   const decimals = Currencies[fiat].units[fiat as UnitType].decimal_digits
+      //   const standardRate = convertBaseToStandard(coin, buyQuote.rate)
+      //   const standardInputAmount = convertBaseToStandard(coin, input.amount)
+      //   const inputAmount = new BigNumber(standardInputAmount || '0')
+      //     .dividedBy(standardRate)
+      //     .toFixed(decimals)
+      //   if (orderType === OrderType.BUY && fix === 'CRYPTO') {
+      //     // @ts-ignore
+      //     delete output.amount
+      //     input.amount = convertStandardToBase('FIAT', inputAmount) // ex. 5 -> 500
+      //   }
+      //   if (orderType === OrderType.BUY && fix === 'FIAT') {
+      //     // @ts-ignore
+      //     delete output.amount
+      //   }
+      // } else {
+      //   if (orderType === OrderType.BUY && fix === 'CRYPTO') {
+      //     // @ts-ignore
+      //     delete input.amount
+      //   }
+      //   if (orderType === OrderType.BUY && fix === 'FIAT') {
+      //     // @ts-ignore
+      //     delete output.amount
+      //   }
+      // }
+
+      // let buyOrder: BSOrderType
+      // let oldBuyOrder: BSOrderType | undefined
+
+      // if (mobilePaymentMethod === MobilePaymentType.APPLE_PAY) {
+      //   const applePayInfo: ApplePayInfoType = yield call(api.getApplePayInfo, fiat)
+
+      //   yield put(A.setApplePayInfo(applePayInfo))
+      // }
+
+      // if (mobilePaymentMethod === MobilePaymentType.GOOGLE_PAY) {
+      //   const googlePayInfo: GooglePayInfoType = yield call(api.getGooglePayInfo, fiat)
+
+      //   yield put(A.setGooglePayInfo(googlePayInfo))
+      // }
+
+      // yield put(A.createOrderLoading())
+
+      // // This code is handles refreshing the buy order when the user sits on
+      // // the order confirmation screen.
+      // if (isFlexiblePricingModel) {
+      //   while (true) {
+      //     // non gold users can only make one order at a time so we need to cancel the old one
+      //     if (oldBuyOrder) {
+      //       yield call(api.cancelBSOrder, oldBuyOrder)
+      //     }
+      //     // get the current order, if any
+      //     const currentBuyQuote = S.getBuyQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
+
+      //     buyOrder = yield call(
+      //       api.createBSOrder,
+      //       pair.pair,
+      //       orderType,
+      //       true,
+      //       input,
+      //       output,
+      //       paymentType,
+      //       period,
+      //       paymentMethodId,
+      //       currentBuyQuote.quote.quoteId
+      //     )
+
+      //     // first time creating the order when the user submits the enter amount form
+      //     if (!oldBuyOrder) {
+      //       yield put(actions.form.stopSubmit(FORM_BS_CHECKOUT))
+      //     }
+
+      //     yield put(A.fetchOrders())
+      //     yield put(A.createOrderSuccess(buyOrder))
+
+      //     yield put(A.setStep({ step: 'CHECKOUT_CONFIRM' }))
+
+      //     oldBuyOrder = buyOrder
+
+      //     // pause the while loop here until if/when the quote expires again, then refresh the order
+      //     yield take(A.fetchBuyQuoteSuccess)
+      //     // need to get curren step and break if not checkout confirm
+      //     // usually happens when the user goes back to the enter amount form
+      //     const currentStep = S.getStep(yield select())
+      //     if (currentStep !== 'CHECKOUT_CONFIRM') {
+      //       break
+      //     }
+      //   }
+      // } else {
+      //   buyOrder = yield call(
+      //     api.createBSOrder,
+      //     pair.pair,
+      //     orderType,
+      //     true,
+      //     input,
+      //     output,
+      //     paymentType,
+      //     period,
+      //     paymentMethodId,
+      //     buyQuote?.quote?.quoteId
+      //   )
+
+      //   yield put(actions.form.stopSubmit(FORM_BS_CHECKOUT))
+      //   yield put(A.fetchOrders())
+      //   yield put(A.createOrderSuccess(buyOrder))
+
+      //   yield put(A.setStep({ step: 'CHECKOUT_CONFIRM' }))
+      // }
+    } catch (e) {
+      if (isNabuError(e)) {
+        return yield put(
+          actions.form.stopSubmit(FORM_BS_CHECKOUT, {
+            _error: e
           })
         )
-        yield put(actions.form.stopSubmit(FORM_BS_PREVIEW_SELL))
-        yield put(actions.components.refresh.refreshClicked())
-        return yield put(actions.components.swap.fetchTrades())
       }
 
-      if (!paymentType) throw new Error(BS_ERROR.NO_PAYMENT_TYPE)
-      if (isFlexiblePricingModel) {
-        // FIXME: this temporarily enables users to purchase min amounts of crypto with the enter amount fix set to CRYPTO
-        // remove this section when backend updates the flexiblePricing APIs to handle crypto amounts
-        const decimals = Currencies[fiat].units[fiat as UnitType].decimal_digits
-        const standardRate = convertBaseToStandard(coin, buyQuote.rate)
-        const standardInputAmount = convertBaseToStandard(coin, input.amount)
-        const inputAmount = new BigNumber(standardInputAmount || '0')
-          .dividedBy(standardRate)
-          .toFixed(decimals)
-        if (orderType === OrderType.BUY && fix === 'CRYPTO') {
-          // @ts-ignore
-          delete output.amount
-          input.amount = convertStandardToBase('FIAT', inputAmount) // ex. 5 -> 500
-        }
-        if (orderType === OrderType.BUY && fix === 'FIAT') {
-          // @ts-ignore
-          delete output.amount
-        }
-      } else {
-        if (orderType === OrderType.BUY && fix === 'CRYPTO') {
-          // @ts-ignore
-          delete input.amount
-        }
-        if (orderType === OrderType.BUY && fix === 'FIAT') {
-          // @ts-ignore
-          delete output.amount
-        }
-      }
-
-      let buyOrder: BSOrderType
-      let oldBuyOrder: BSOrderType | undefined
-
-      if (mobilePaymentMethod === MobilePaymentType.APPLE_PAY) {
-        const applePayInfo: ApplePayInfoType = yield call(api.getApplePayInfo, fiat)
-
-        yield put(A.setApplePayInfo(applePayInfo))
-      }
-
-      if (mobilePaymentMethod === MobilePaymentType.GOOGLE_PAY) {
-        const googlePayInfo: GooglePayInfoType = yield call(api.getGooglePayInfo, fiat)
-
-        yield put(A.setGooglePayInfo(googlePayInfo))
-      }
-
-      yield put(A.createOrderLoading())
-
-      // This code is handles refreshing the buy order when the user sits on
-      // the order confirmation screen.
-      if (isFlexiblePricingModel) {
-        while (true) {
-          // non gold users can only make one order at a time so we need to cancel the old one
-          if (oldBuyOrder) {
-            yield call(api.cancelBSOrder, oldBuyOrder)
-          }
-          // get the current order, if any
-          const currentBuyQuote = S.getBuyQuote(yield select()).getOrFail(BS_ERROR.NO_QUOTE)
-
-          buyOrder = yield call(
-            api.createBSOrder,
-            pair.pair,
-            orderType,
-            true,
-            input,
-            output,
-            paymentType,
-            period,
-            paymentMethodId,
-            currentBuyQuote.quote.quoteId
-          )
-
-          // first time creating the order when the user submits the enter amount form
-          if (!oldBuyOrder) {
-            yield put(actions.form.stopSubmit(FORM_BS_CHECKOUT))
-          }
-
-          yield put(A.fetchOrders())
-          yield put(A.createOrderSuccess(buyOrder))
-
-          yield put(A.setStep({ step: 'CHECKOUT_CONFIRM' }))
-
-          oldBuyOrder = buyOrder
-
-          // pause the while loop here until if/when the quote expires again, then refresh the order
-          yield take(A.fetchBuyQuoteSuccess)
-          // need to get curren step and break if not checkout confirm
-          // usually happens when the user goes back to the enter amount form
-          const currentStep = S.getStep(yield select())
-          if (currentStep !== 'CHECKOUT_CONFIRM') {
-            break
-          }
-        }
-      } else {
-        buyOrder = yield call(
-          api.createBSOrder,
-          pair.pair,
-          orderType,
-          true,
-          input,
-          output,
-          paymentType,
-          period,
-          paymentMethodId,
-          buyQuote?.quote?.quoteId
-        )
-
-        yield put(actions.form.stopSubmit(FORM_BS_CHECKOUT))
-        yield put(A.fetchOrders())
-        yield put(A.createOrderSuccess(buyOrder))
-
-        yield put(A.setStep({ step: 'CHECKOUT_CONFIRM' }))
-      }
-    } catch (e) {
       const error: number | string = errorHandlerCode(e)
 
       const skipErrorDisplayList = [BS_ERROR.NO_AMOUNT, BS_ERROR.NO_AMOUNT]
