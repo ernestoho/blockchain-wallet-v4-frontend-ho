@@ -1763,11 +1763,8 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       // users with diff tier than 2 can't sell
       if (!userCanBuyMore || orderType === OrderType.SELL) {
         yield put(
-          actions.modals.showModal({
-            props: {
-              origin: 'BuySellInit'
-            },
-            type: ModalName.UPGRADE_NOW_SILVER_MODAL
+          actions.modals.showModal(ModalName.UPGRADE_NOW_SILVER_MODAL, {
+            origin: 'BuySellInit'
           })
         )
         return
@@ -1780,12 +1777,7 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       hasPendingOBOrder = prop('partner', bankAccount) === BankPartners.YAPILY
     }
 
-    yield put(
-      actions.modals.showModal({
-        props: { cryptoCurrency, origin },
-        type: ModalName.SIMPLE_BUY_MODAL
-      })
-    )
+    yield put(actions.modals.showModal(ModalName.SIMPLE_BUY_MODAL, { cryptoCurrency, origin }))
     const fiatCurrency = selectors.core.settings
       .getCurrency(yield select())
       .getOrElse('USD') as FiatType
