@@ -261,7 +261,7 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
           )
         }
       } else {
-        yield put(actions.modals.closeModal('SIMPLE_BUY_MODAL'))
+        yield put(actions.modals.closeModal({ modalName: ModalName.SIMPLE_BUY_MODAL }))
       }
     } catch (e) {
       // TODO: adding error handling with different error types and messages
@@ -1617,7 +1617,7 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       const origin = S.getOrigin(yield select())
 
       if (origin === 'SettingsGeneral') {
-        yield put(actions.modals.closeModal('SIMPLE_BUY_MODAL'))
+        yield put(actions.modals.closeModal({ modalName: ModalName.SIMPLE_BUY_MODAL }))
 
         yield put(actions.alerts.displaySuccess('Card Added.'))
       }
@@ -1763,8 +1763,11 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       // users with diff tier than 2 can't sell
       if (!userCanBuyMore || orderType === OrderType.SELL) {
         yield put(
-          actions.modals.showModal(ModalName.UPGRADE_NOW_SILVER_MODAL, {
-            origin: 'BuySellInit'
+          actions.modals.showModal({
+            props: {
+              origin: 'BuySellInit'
+            },
+            type: ModalName.UPGRADE_NOW_SILVER_MODAL
           })
         )
         return
@@ -1777,7 +1780,12 @@ export default ({ api, coreSagas, networks }: { api: APIType; coreSagas: any; ne
       hasPendingOBOrder = prop('partner', bankAccount) === BankPartners.YAPILY
     }
 
-    yield put(actions.modals.showModal('SIMPLE_BUY_MODAL', { cryptoCurrency, origin }))
+    yield put(
+      actions.modals.showModal({
+        props: { cryptoCurrency, origin },
+        type: ModalName.SIMPLE_BUY_MODAL
+      })
+    )
     const fiatCurrency = selectors.core.settings
       .getCurrency(yield select())
       .getOrElse('USD') as FiatType
